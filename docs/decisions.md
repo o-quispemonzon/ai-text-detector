@@ -1,7 +1,10 @@
 # Decisiones de arquitectura
 
-Registro de decisiones técnicas del proyecto. Contexto: todo corre en una laptop
-(i9-14900HX, RTX 4070 8GB, 16GB RAM, WSL2), sin nube, en un sprint de 7 días.
+Registro de las decisiones técnicas del proyecto y el porqué de cada una. El contexto
+manda: todo corre en mi laptop (i9-14900HX, RTX 4070 8GB, 16GB RAM, WSL2), sin nube y en
+un sprint de una semana. Varias decisiones serían distintas con otro presupuesto u otro
+plazo — si algo parece "poco enterprise", casi seguro fue a propósito y aquí explico
+el trade-off.
 
 ## 1. MLflow (local) en lugar de Weights & Biases
 
@@ -55,13 +58,13 @@ el servicio y no se duplica en la UI.
 
 ## 8. Servir LightGBM, no el transformer
 
-Resultados finales: DeBERTa-v3-small gana por 0.0005 de AUC OOD (0.9998 vs 0.9993), pero
-cuesta 286MB de artefacto, GPU para entrenar y ~2 órdenes de magnitud más de latencia de
-inferencia en CPU. Para un detector servido en contenedor CPU, LightGBM da el mejor
-trade-off: milisegundos por predicción, imagen liviana, mismo rendimiento práctico. El
-transformer queda registrado en MLflow como evidencia de la comparación y techo de calidad.
-Nota honesta: con 2 épocas la eval_loss subió de 0.016 a 0.060 (sobreajuste leve); 1 época
-era suficiente.
+Aquí me hice la pregunta incómoda: si DeBERTa ganó, ¿por qué no servirlo? Los números:
+gana por 0.0005 de AUC OOD (0.9998 vs 0.9993), pero cuesta 286MB de artefacto, GPU para
+entrenar y ~2 órdenes de magnitud más de latencia de inferencia en CPU. Para un detector
+servido en contenedor CPU, esa cuarta cifra decimal no paga el costo: LightGBM responde en
+milisegundos con el mismo rendimiento práctico. El transformer queda registrado en MLflow
+como evidencia de la comparación y techo de calidad. Nota honesta: con 2 épocas la
+eval_loss subió de 0.016 a 0.060 (sobreajuste leve); con 1 época bastaba.
 
 ## 9. Log de predicciones en JSONL, sin texto crudo
 

@@ -10,6 +10,16 @@ El proyecto compara dos enfoques de modelado de punta a punta y envuelve al gana
 stack de MLOps que corre **100% en local** (sin nube): MLflow, Docker, GitHub Actions,
 FastAPI, Evidently y Streamlit. Entrenado en una laptop (i9-14900HX, RTX 4070 8GB, WSL2).
 
+## ¿Por qué este proyecto?
+
+Arranqué con una pregunta que me venía dando vueltas: ¿cuánto aporta *de verdad* un
+transformer frente a un TF-IDF bien hecho en esta tarea? Todo el mundo asume que el modelo
+grande gana, pero en la competencia real de Kaggle los char n-grams dieron pelea seria, y
+yo quería medir esa brecha con mis propias manos y un split que no se haga trampa. Y de
+paso demostrarme algo más: que un modelo no es un proyecto. El pipeline reproducible, los
+tests, el CI y el monitoreo son la otra mitad del trabajo, y esa mitad es la que casi nunca
+se ve en un notebook.
+
 ## Resultados
 
 Evaluación en dos niveles — un test aleatorio estratificado (**IID**) y un test con las
@@ -23,25 +33,29 @@ familias de generadores **claude, palm y cohere excluidas por completo del entre
 | Random Forest (ablación) | solo estilometría (16 features) | 0.9804 | 0.9795 | 0.9700 | <1 min (CPU) |
 | DeBERTa-v3-small (fine-tuned) | texto crudo, 512 tokens | **0.9997** | **0.9996** | **0.9998** | ~67 min (GPU) |
 
-### Lectura honesta de los resultados
+### Lo que aprendí de estos números (lectura honesta)
 
-1. **Los char n-grams son brutalmente efectivos en esta tarea.** Un modelo lineal de los
-   2000s empata en la práctica con un transformer fine-tuneado (diferencia < 0.001 AUC).
-   Coincide con la competencia real, donde los mejores enfoques usaban n-grams de caracteres.
+1. **Los char n-grams son brutalmente efectivos aquí.** Un modelo lineal de los 2000s
+   empata en la práctica con un transformer fine-tuneado (diferencia < 0.001 AUC). No me
+   lo esperaba tan parejo, pero coincide con la competencia real, donde los mejores
+   enfoques usaban n-grams de caracteres.
 2. **El transformer gana justo donde importa: OOD** (0.9998 vs 0.9993). Su representación
-   semántica transfiere mejor a generadores no vistos. Pero cuesta 286MB de modelo, GPU
-   para entrenar y una latencia de inferencia en CPU dos órdenes de magnitud mayor.
-3. **La ablación de solo-estilometría muestra la grieta:** cae de 0.980 IID a 0.970 OOD.
-   El "estilo" (puntuación, variedad léxica, longitud de oraciones) cambia entre familias
-   de LLMs; el vocabulario compartido es lo que sostiene la transferencia.
-4. **Escepticismo obligatorio:** los generadores held-out escriben sobre los *mismos 15
-   prompts* del corpus. Un OOD por dominio (otros temas, otros registros) sería más duro, y
-   es la extensión natural de este trabajo. Un AUC de 0.999 aquí no significa 0.999 en
-   producción real contra LLMs de 2026.
+   semántica transfiere mejor a generadores que nunca vio. Pero esa cuarta cifra decimal
+   cuesta 286MB de modelo, una GPU para entrenar y una latencia en CPU dos órdenes de
+   magnitud mayor.
+3. **La ablación de solo-estilometría me mostró dónde está la grieta:** cae de 0.980 IID a
+   0.970 OOD. El "estilo" (puntuación, variedad léxica, longitud de oraciones) cambia
+   entre familias de LLMs; lo que sostiene la transferencia es el vocabulario compartido.
+4. **Y el escepticismo obligatorio:** mi test OOD no es tan duro como suena, porque los
+   generadores held-out escriben sobre los *mismos 15 prompts* del corpus. Un OOD por
+   dominio (otros temas, otros registros) sería la prueba de fuego, y es la extensión
+   natural de este trabajo. Un AUC de 0.999 aquí no significa 0.999 en producción contra
+   los LLMs de 2026 — y prefiero decirlo yo antes de que me lo pregunten.
 
-**Decisión de producción:** se sirve **LightGBM** (mejor AUC OOD del enfoque clásico):
-latencia de milisegundos en CPU, imagen Docker liviana y sin GPU en runtime. La
-justificación completa está en [docs/decisions.md](docs/decisions.md).
+**Decisión de producción:** elegí servir **LightGBM** (mejor AUC OOD del enfoque clásico).
+Me quedo con milisegundos de latencia en CPU y una imagen Docker liviana antes que con la
+cuarta cifra decimal del transformer. La justificación completa, con trade-offs, está en
+[docs/decisions.md](docs/decisions.md).
 
 ## Arquitectura
 
@@ -121,4 +135,6 @@ Detalle y trade-offs: [docs/decisions.md](docs/decisions.md).
 
 Datasets DAIGT de la comunidad de Kaggle (Darek Kłeczek y colaboradores). Este repo no
 redistribuye datos: `make data` los descarga de la fuente y verifica integridad.
-Proyecto de portafolio de Alejandro Quispe (UTEC, Lima) — construido en un sprint de 7 días.
+
+Proyecto de portafolio de Alejandro Quispe (Ciencia de Datos, UTEC — Lima, Perú).
+Me lo planteé como un sprint de 7 días; terminó saliendo en 4.
