@@ -56,10 +56,12 @@ dev = [
 ]
 monitor = [
     { name = "evidently" },
+    { name = "httpx" },
     { name = "streamlit" },
 ]
 serve = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -77,8 +79,10 @@ transformer = [
 requires-dist = [
     { name = "accelerate", marker = "extra == 'transformer'", specifier = ">=0.33" },
     { name = "datasets", marker = "extra == 'transformer'", specifier = ">=2.20" },
-    { name = "evidently", marker = "extra == 'monitor'", specifier = ">=0.4.33" },
+    { name = "evidently", marker = "extra == 'monitor'", specifier = ">=0.7" },
     { name = "fastapi", marker = "extra == 'serve'", specifier = ">=0.115" },
+    { name = "httpx", marker = "extra == 'monitor'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'serve'", specifier = ">=0.27" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29" },
     { name = "joblib", specifier = ">=1.4" },
     { name = "kaggle", specifier = ">=1.6" },

@@ -1,56 +1,124 @@
 # AI Text Detector — ¿humano o LLM?
 
-Clasificador de ensayos humanos vs. generados por LLM, basado en la competencia de Kaggle
-[LLM - Detect AI Generated Text](https://www.kaggle.com/competitions/llm-detect-ai-generated-text)
-y los datasets comunitarios DAIGT-v2/v3. El proyecto compara dos enfoques de modelado
-(clásico: TF-IDF + LightGBM/LogReg vs. transformer: DeBERTa-v3) y lo envuelve en un stack
-de MLOps completo que corre **100% en local**: MLflow, Docker, GitHub Actions, FastAPI,
-Evidently y Streamlit.
+[![CI](https://github.com/o-quispemonzon/ai-text-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/o-quispemonzon/ai-text-detector/actions/workflows/ci.yml)
 
-> 🚧 Proyecto en construcción (sprint de 7 días). Este README se completa al final con
-> resultados, comparación de enfoques y diagrama de arquitectura.
+Clasificador de ensayos **escritos por humanos vs. generados por LLMs**, basado en la
+competencia de Kaggle [LLM - Detect AI Generated Text](https://www.kaggle.com/competitions/llm-detect-ai-generated-text)
+y el dataset comunitario DAIGT-v3 (65k ensayos, 28 fuentes, 11 familias de generadores).
 
-## Quickstart (WSL2 / Linux)
+El proyecto compara dos enfoques de modelado de punta a punta y envuelve al ganador en un
+stack de MLOps que corre **100% en local** (sin nube): MLflow, Docker, GitHub Actions,
+FastAPI, Evidently y Streamlit. Entrenado en una laptop (i9-14900HX, RTX 4070 8GB, WSL2).
 
-Requisitos: [uv](https://docs.astral.sh/uv/), cuenta de Kaggle con token de API.
+## Resultados
+
+Evaluación en dos niveles — un test aleatorio estratificado (**IID**) y un test con las
+familias de generadores **claude, palm y cohere excluidas por completo del entrenamiento**
+(**OOD**): mide si el detector generaliza a LLMs que nunca vio, que es el problema real.
+
+| Modelo | Features | AUC val | AUC test IID | AUC test OOD | Entrenamiento |
+|---|---|---|---|---|---|
+| Logistic Regression | TF-IDF word+char + estilometría | 0.9994 | 0.9993 | 0.9992 | ~4 min (CPU) |
+| LightGBM | TF-IDF word+char + estilometría | 0.9995 | **0.9996** | 0.9993 | ~21 min (CPU) |
+| Random Forest (ablación) | solo estilometría (16 features) | 0.9804 | 0.9795 | 0.9700 | <1 min (CPU) |
+| DeBERTa-v3-small (fine-tuned) | texto crudo, 512 tokens | **0.9997** | **0.9996** | **0.9998** | ~67 min (GPU) |
+
+### Lectura honesta de los resultados
+
+1. **Los char n-grams son brutalmente efectivos en esta tarea.** Un modelo lineal de los
+   2000s empata en la práctica con un transformer fine-tuneado (diferencia < 0.001 AUC).
+   Coincide con la competencia real, donde los mejores enfoques usaban n-grams de caracteres.
+2. **El transformer gana justo donde importa: OOD** (0.9998 vs 0.9993). Su representación
+   semántica transfiere mejor a generadores no vistos. Pero cuesta 286MB de modelo, GPU
+   para entrenar y una latencia de inferencia en CPU dos órdenes de magnitud mayor.
+3. **La ablación de solo-estilometría muestra la grieta:** cae de 0.980 IID a 0.970 OOD.
+   El "estilo" (puntuación, variedad léxica, longitud de oraciones) cambia entre familias
+   de LLMs; el vocabulario compartido es lo que sostiene la transferencia.
+4. **Escepticismo obligatorio:** los generadores held-out escriben sobre los *mismos 15
+   prompts* del corpus. Un OOD por dominio (otros temas, otros registros) sería más duro, y
+   es la extensión natural de este trabajo. Un AUC de 0.999 aquí no significa 0.999 en
+   producción real contra LLMs de 2026.
+
+**Decisión de producción:** se sirve **LightGBM** (mejor AUC OOD del enfoque clásico):
+latencia de milisegundos en CPU, imagen Docker liviana y sin GPU en runtime. La
+justificación completa está en [docs/decisions.md](docs/decisions.md).
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    subgraph datos["Datos"]
+        K[Kaggle DAIGT v2/v3] -->|download.py + manifest SHA-256| R[data/raw]
+        R -->|prepare.py: limpieza + splits| P["train / val / test_iid / test_ood"]
+    end
+    subgraph entrenamiento["Entrenamiento (local)"]
+        P --> C["clásico: TF-IDF + estilometría<br/>LogReg / LightGBM / RF"]
+        P --> T["transformer: DeBERTa-v3-small<br/>bf16, RTX 4070"]
+        C --> M[(MLflow<br/>SQLite + artefactos)]
+        T --> M
+    end
+    subgraph produccion["Producción simulada"]
+        M -->|export_best.py| B[models/model.joblib]
+        B --> A["FastAPI en Docker<br/>/predict /health"]
+        A -->|JSONL sin texto crudo| L[log de predicciones]
+        L --> E["Evidently<br/>reporte de drift"]
+        A --> S[demo Streamlit]
+    end
+    subgraph ci["CI (GitHub Actions)"]
+        G["lint + tests + build imagen<br/>+ smoke test del contenedor"]
+    end
+```
+
+## Reproducción local
+
+Requisitos: WSL2/Linux, [uv](https://docs.astral.sh/uv/), cuenta de Kaggle, Docker
+(opcional), GPU NVIDIA (solo para el transformer).
 
 ```bash
-# 1. Instalar dependencias (crea .venv con Python 3.11)
-make setup
+make setup            # dependencias (uv, incluye torch CUDA en Linux)
+# token de Kaggle en ~/.kaggle/kaggle.json (kaggle.com -> Settings -> API)
+make data             # descarga DAIGT + manifest con hashes
+make prepare          # limpieza + 4 splits reproducibles (seed=42)
+make test             # 27 tests
+make train-classic    # 3 modelos clásicos -> MLflow
+make train-transformer  # DeBERTa-v3-small (GPU, ~1h)
+make mlflow           # UI de experimentos en :5000
 
-# 2. Credenciales de Kaggle (una sola vez)
-#    kaggle.com -> Settings -> API -> "Create New Token" descarga kaggle.json
-mkdir -p ~/.kaggle && mv /ruta/a/kaggle.json ~/.kaggle/ && chmod 600 ~/.kaggle/kaggle.json
-
-# 3. Descargar datasets DAIGT-v2 y v3 (genera data/manifest.json con hashes)
-make data
-
-# 4. Verificar que todo está en orden
-make lint test
-
-# 5. UI de MLflow para explorar experimentos
-make mlflow   # http://localhost:5000
+make export-model     # mejor modelo (AUC OOD) -> models/
+make serve            # API en :8000 (docs interactivas en /docs)
+make streamlit        # demo visual (cliente de la API)
+make simulate-traffic && make drift-report   # monitoreo con Evidently
+make docker-build && make docker-run         # serving containerizado
 ```
 
 ## Estructura
 
 ```
-configs/       Configuración YAML (datos, modelos)
-data/          Datasets (gitignored; manifest.json versiona hashes y procedencia)
-docker/        Dockerfiles de entrenamiento y serving
-docs/          Decisiones de arquitectura y diagrama
-monitoring/    Drift (Evidently) y simulación de tráfico
-notebooks/     EDA y análisis de errores
-src/           Código fuente: data / features / models / serving / utils
-tests/         Tests unitarios (pytest)
+configs/            YAML de datos y modelos (una sola fuente de verdad)
+data/               gitignored; manifest.json versiona hashes y procedencia
+docker/             Dockerfile.serve (CPU, multi-stage, non-root)
+docs/decisions.md   por qué cada herramienta (MLflow, manifest vs DVC, CI sin GPU...)
+monitoring/         drift con Evidently + simulador de tráfico
+notebooks/          EDA con el diseño de splits fundamentado
+src/data            descarga idempotente + limpieza + splits
+src/features        TF-IDF (word/char) + 16 features estilométricas (sklearn transformers)
+src/models          entrenamiento clásico y transformer + export desde MLflow
+src/serving         FastAPI + schemas + logging de predicciones
+tests/              27 tests (datos, features, métricas, API)
+.github/workflows   CI: lint, tests, build Docker + smoke test del contenedor
 ```
 
-## Decisiones de arquitectura
+## Decisiones de MLOps (resumen)
 
-Ver [docs/decisions.md](docs/decisions.md): por qué MLflow y no W&B, por qué manifest en
-lugar de DVC, por qué el CI no entrena modelos, etc.
+MLflow con backend SQLite en lugar de W&B (100% local, sin cuenta); manifest con SHA-256
+en lugar de DVC (los datasets son estáticos; time-travel no aporta); el CI valida código y
+pipeline con un modelo dummy pero nunca entrena (runners CPU-only); la API loggea
+predicciones sin texto crudo (privacidad) en JSONL (sin locks de SQLite en NTFS/9p); la
+demo Streamlit es cliente de la API, no carga el modelo (el monitoreo vive en el servicio).
+Detalle y trade-offs: [docs/decisions.md](docs/decisions.md).
 
-## Licencia y datos
+## Créditos y datos
 
-Los datasets DAIGT son de la comunidad de Kaggle (créditos a Darek Kłeczek y colaboradores).
-Este repositorio no redistribuye datos; el script `make data` los descarga de la fuente.
+Datasets DAIGT de la comunidad de Kaggle (Darek Kłeczek y colaboradores). Este repo no
+redistribuye datos: `make data` los descarga de la fuente y verifica integridad.
+Proyecto de portafolio de Alejandro Quispe (UTEC, Lima) — construido en un sprint de 7 días.

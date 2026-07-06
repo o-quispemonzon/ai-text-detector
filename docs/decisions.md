@@ -53,7 +53,24 @@ La API es el artefacto de producción: containerizada, testeada, con logging de
 predicciones. Streamlit es un cliente visual que consume la API. Así el monitoreo vive en
 el servicio y no se duplica en la UI.
 
-## 8. Evidently para drift, sin Prometheus/Grafana
+## 8. Servir LightGBM, no el transformer
+
+Resultados finales: DeBERTa-v3-small gana por 0.0005 de AUC OOD (0.9998 vs 0.9993), pero
+cuesta 286MB de artefacto, GPU para entrenar y ~2 órdenes de magnitud más de latencia de
+inferencia en CPU. Para un detector servido en contenedor CPU, LightGBM da el mejor
+trade-off: milisegundos por predicción, imagen liviana, mismo rendimiento práctico. El
+transformer queda registrado en MLflow como evidencia de la comparación y techo de calidad.
+Nota honesta: con 2 épocas la eval_loss subió de 0.016 a 0.060 (sobreajuste leve); 1 época
+era suficiente.
+
+## 9. Log de predicciones en JSONL, sin texto crudo
+
+SQLite falla con locks sobre NTFS/9p y guardar el texto del usuario es un riesgo de
+privacidad innecesario. La API registra hash + longitudes + score en JSONL (append atómico,
+funciona igual en contenedor y CI), que es exactamente el insumo que necesita el reporte
+de drift.
+
+## 10. Evidently para drift, sin Prometheus/Grafana
 
 Evidently genera reportes de data drift (longitudes, vocabulario, distribución de scores)
 en HTML, local y sin infraestructura. Un stack Prometheus+Grafana sería sobreingeniería

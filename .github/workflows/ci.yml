@@ -1,0 +1,67 @@
+# CI: valida código y pipeline; NUNCA entrena modelos reales.
+# Los runners gratuitos son CPU-only: el entrenamiento es un proceso aparte
+# (Make + GPU local). Decisión documentada en docs/decisions.md.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Lint y tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias (sin extras pesados)
+        run: uv sync --extra dev --extra serve
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+
+      - name: Tests (pytest)
+        run: uv run pytest -v
+
+  docker:
+    name: Build y smoke test de la imagen de serving
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Generar modelo dummy para la imagen
+        run: |
+          uv sync --extra serve
+          uv run python -m src.models.make_dummy_model
+
+      - name: Build de la imagen
+        run: docker build -f docker/Dockerfile.serve -t ai-text-detector:ci .
+
+      - name: Smoke test del contenedor
+        run: |
+          docker run -d --rm -p 8000:8000 --name detector ai-text-detector:ci
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:8000/health && break
+            sleep 2
+          done
+          curl -sf http://localhost:8000/health | grep -q '"status":"ok"'
+          curl -sf -X POST http://localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"text": "this is a smoke test essay written by a student"}' \
+            | grep -q "proba_ai"
+          docker stop detector

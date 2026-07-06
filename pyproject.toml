@@ -22,6 +22,7 @@ serve = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "pydantic>=2.8",
+    "httpx>=0.27",
 ]
 transformer = [
     "torch>=2.4",
@@ -33,8 +34,9 @@ transformer = [
     "protobuf>=4.25",
 ]
 monitor = [
-    "evidently>=0.4.33",
+    "evidently>=0.7",
     "streamlit>=1.38",
+    "httpx>=0.27",
 ]
 dev = [
     "pytest>=8.3",

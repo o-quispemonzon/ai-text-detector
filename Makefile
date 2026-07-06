@@ -26,6 +26,32 @@ train-classic:
 train-transformer:
 	uv run python -m src.models.train_transformer
 
+## Exporta el mejor modelo (por AUC OOD) desde MLflow a models/
+export-model:
+	uv run python -m src.models.export_best
+
+## API de inferencia local en http://localhost:8000 (docs en /docs)
+serve:
+	uv run uvicorn src.serving.app:app --reload --port 8000
+
+## Imagen Docker de serving y ejecución
+docker-build:
+	docker build -f docker/Dockerfile.serve -t ai-text-detector:latest .
+
+docker-run:
+	docker run --rm -p 8000:8000 ai-text-detector:latest
+
+## Demo Streamlit (requiere la API corriendo: make serve)
+streamlit:
+	uv run streamlit run app_streamlit.py
+
+## Simula tráfico contra la API y genera el reporte de drift
+simulate-traffic:
+	uv run python monitoring/simulate_traffic.py --n 300
+
+drift-report:
+	uv run python monitoring/drift_report.py
+
 ## Lint + verificación de formato
 lint:
 	uv run ruff check src tests

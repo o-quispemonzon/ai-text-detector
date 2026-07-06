@@ -1,0 +1,39 @@
+# Imagen de inferencia (CPU, liviana). Solo lo necesario para servir el
+# Pipeline sklearn: sin mlflow, sin kaggle, sin torch.
+#
+# Build (desde la raíz del repo):
+#   docker build -f docker/Dockerfile.serve -t ai-text-detector:latest .
+# Run:
+#   docker run --rm -p 8000:8000 ai-text-detector:latest
+
+FROM python:3.11-slim AS runtime
+
+# libgomp1: requerido por LightGBM en runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Dependencias mínimas de serving, fijadas a las mismas familias que pyproject.
+# Decisión documentada en docs/decisions.md: la imagen no reutiliza uv.lock
+# completo porque este incluye extras de entrenamiento (torch ~2.5GB).
+RUN pip install --no-cache-dir \
+    "fastapi>=0.115" "uvicorn[standard]>=0.30" "pydantic>=2.8" \
+    "scikit-learn>=1.5" "lightgbm>=4.5" "pandas>=2.2" "numpy>=1.26" "joblib>=1.4"
+
+COPY src/ ./src/
+COPY models/model.joblib models/model_meta.json ./models/
+
+ENV MODEL_PATH=models/model.joblib \
+    PREDICTION_LOG=/app/logs/predictions.jsonl \
+    PYTHONUNBUFFERED=1
+
+RUN useradd -m appuser && mkdir -p /app/logs && chown appuser /app/logs
+USER appuser
+
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s \
+    CMD python -c "import urllib.request as u; u.urlopen('http://localhost:8000/health')"
+
+CMD ["uvicorn", "src.serving.app:app", "--host", "0.0.0.0", "--port", "8000"]
