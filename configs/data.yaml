@@ -1,0 +1,19 @@
+# Configuración del pipeline de datos
+datasets:
+  - name: daigt_v2
+    slug: thedrcat/daigt-v2-train-dataset
+  - name: daigt_v3
+    slug: thedrcat/daigt-v3-train-dataset
+
+paths:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  manifest: data/manifest.json
+
+split:
+  seed: 42
+  test_size: 0.15
+  val_size: 0.15
+  # Held-out por generador/fuente para medir generalización real.
+  # Se define tras el EDA del día 1 (ej. dejar fuera una familia de modelos).
+  holdout_sources: []

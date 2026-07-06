@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-07-06T05:42:42+00:00",
+  "files": [
+    {
+      "dataset": "daigt_v2",
+      "kaggle_slug": "thedrcat/daigt-v2-train-dataset",
+      "file": "raw/daigt_v2/train_v2_drcat_02.csv",
+      "size_bytes": 101908038,
+      "sha256": "737a355ef9c43ef2e4c2f5556c03ad52a84d7da0e7e7ac311ec59375bc667bc7"
+    },
+    {
+      "dataset": "daigt_v3",
+      "kaggle_slug": "thedrcat/daigt-v3-train-dataset",
+      "file": "raw/daigt_v3/train_v3_drcat_01.csv",
+      "size_bytes": 158136397,
+      "sha256": "fb06368dbc9dad8a33bbcf99b82b6b9ab8a69e58f1ccda8a906a98d26428b1b3"
+    },
+    {
+      "dataset": "daigt_v3",
+      "kaggle_slug": "thedrcat/daigt-v3-train-dataset",
+      "file": "raw/daigt_v3/train_v3_drcat_02.csv",
+      "size_bytes": 158146717,
+      "sha256": "36af8cb8623b379d01f3a5edf8de91b148c377a41c91b79108511d8d68ec7815"
+    }
+  ]
+}
