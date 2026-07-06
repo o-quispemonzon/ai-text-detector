@@ -11,6 +11,7 @@ __pycache__/
 *.egg-info/
 
 # Experimentos y artefactos
+mlflow.db
 mlruns/
 mlartifacts/
 models/artifacts/

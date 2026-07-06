@@ -1,0 +1,39 @@
+# Enfoque clásico: TF-IDF + estilometría con modelos de sklearn/LightGBM
+experiment: classic
+seed: 42
+
+features:
+  tfidf_word:
+    ngram_min: 1
+    ngram_max: 2
+    min_df: 10
+    max_features: 75000
+  tfidf_char:          # char n-grams: la señal más fuerte en esta tarea
+    ngram_min: 3
+    ngram_max: 5
+    min_df: 10
+    max_features: 100000
+
+models:
+  logreg:
+    features: full
+    params:
+      C: 1.0
+      max_iter: 3000
+      solver: liblinear
+  lightgbm:
+    features: full
+    params:
+      n_estimators: 600
+      learning_rate: 0.1
+      num_leaves: 63
+      max_bin: 63          # histogramas chicos: clave para la RAM con 175k features
+      force_col_wise: true
+      n_jobs: 8
+      verbosity: -1
+  random_forest:       # ablación: SOLO features de estilo, sin vocabulario
+    features: stylometric
+    params:
+      n_estimators: 400
+      min_samples_leaf: 3
+      n_jobs: -1

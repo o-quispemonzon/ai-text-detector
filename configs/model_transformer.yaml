@@ -1,0 +1,17 @@
+# Enfoque transformer: fine-tuning de DeBERTa-v3-small
+# Elegido sobre -base: en esta tarea la ganancia extra es marginal y small
+# entrena en ~30-60 min en una RTX 4070 laptop (8GB VRAM), permitiendo iterar.
+experiment: transformer
+seed: 42
+
+model_name: microsoft/deberta-v3-small
+max_length: 512
+
+training:
+  epochs: 2
+  batch_size: 16          # con fp16 entra en 8GB de VRAM a max_length 512
+  grad_accum: 2           # batch efectivo 32
+  learning_rate: 2.0e-5
+  warmup_ratio: 0.06
+  weight_decay: 0.01
+  fp16: true              # se desactiva solo si no hay GPU

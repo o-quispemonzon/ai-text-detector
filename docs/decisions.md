@@ -6,8 +6,12 @@ Registro de decisiones técnicas del proyecto. Contexto: todo corre en una lapto
 ## 1. MLflow (local) en lugar de Weights & Biases
 
 W&B en modo gratuito depende de su cloud; su modo self-hosted requiere levantar un servidor.
-MLflow corre local con `mlflow ui`, sin cuenta, guarda todo en `mlruns/` y es el estándar
-de facto en stacks empresariales. Coherente con la restricción "solo local".
+MLflow corre local con `mlflow ui`, sin cuenta, y es el estándar de facto en stacks
+empresariales. Coherente con la restricción "solo local". Backend: SQLite, que es lo
+recomendado desde MLflow 3.x (el file store quedó deprecado). La BD vive en
+`~/.ai-text-detector/mlflow.db` (filesystem nativo de Linux) porque SQLite falla con
+`disk I/O error` sobre NTFS/9p cuando el repo está en `/mnt/c` bajo WSL2; los
+artefactos (modelos) sí son archivos planos y van junto al repo en `mlruns/`.
 
 ## 2. Manifest con SHA-256 en lugar de DVC
 

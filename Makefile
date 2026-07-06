@@ -18,6 +18,10 @@ data:
 prepare:
 	uv run python -m src.data.prepare
 
+## Entrena los modelos clásicos con tracking en MLflow
+train-classic:
+	uv run python -m src.models.train_classic
+
 ## Lint + verificación de formato
 lint:
 	uv run ruff check src tests
@@ -32,9 +36,9 @@ format:
 test:
 	uv run pytest
 
-## UI de MLflow en http://localhost:5000
+## UI de MLflow en http://localhost:5000 (BD en ~/.ai-text-detector, ver src/utils/tracking.py)
 mlflow:
-	uv run mlflow ui --backend-store-uri mlruns --port 5000
+	uv run mlflow ui --backend-store-uri sqlite:///$(HOME)/.ai-text-detector/mlflow.db --port 5000
 
 clean:
 	rm -rf .pytest_cache .ruff_cache __pycache__
