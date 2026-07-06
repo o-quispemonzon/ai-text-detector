@@ -7,6 +7,7 @@ authors = [{ name = "Alejandro Quispe", email = "oswaldoaqm@gmail.com" }]
 requires-python = ">=3.11"
 dependencies = [
     "pandas>=2.2",
+    "pyarrow>=17",
     "numpy>=1.26",
     "scikit-learn>=1.5",
     "lightgbm>=4.5",

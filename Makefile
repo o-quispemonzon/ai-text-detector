@@ -1,4 +1,4 @@
-.PHONY: setup data lint format test mlflow clean
+.PHONY: setup data prepare lint format test mlflow clean
 
 # En WSL2, si el repo vive en /mnt/c (NTFS), el venv se crea en el disco ext4
 # de Linux: crear miles de archivos pequeños sobre NTFS vía 9P es lentísimo.
@@ -13,6 +13,10 @@ setup:
 ## Descarga los datasets DAIGT y genera data/manifest.json
 data:
 	uv run python -m src.data.download
+
+## Limpieza + splits train/val/test_iid/test_ood en data/processed/
+prepare:
+	uv run python -m src.data.prepare
 
 ## Lint + verificación de formato
 lint:
