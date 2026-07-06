@@ -14,4 +14,4 @@ training:
   learning_rate: 2.0e-5
   warmup_ratio: 0.06
   weight_decay: 0.01
-  fp16: true              # se desactiva solo si no hay GPU
+  fp16: true              # precisión mixta; usa bf16 si la GPU lo soporta (Ada sí)

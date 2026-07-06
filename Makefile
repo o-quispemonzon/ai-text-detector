@@ -22,6 +22,10 @@ prepare:
 train-classic:
 	uv run python -m src.models.train_classic
 
+## Fine-tuning del transformer (requiere GPU; ~30-60 min en RTX 4070)
+train-transformer:
+	uv run python -m src.models.train_transformer
+
 ## Lint + verificación de formato
 lint:
 	uv run ruff check src tests

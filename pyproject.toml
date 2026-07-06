@@ -25,9 +25,12 @@ serve = [
 ]
 transformer = [
     "torch>=2.4",
-    "transformers>=4.44",
+    # v5 tiene regresiones con DeBERTa (loss NaN en fine-tuning); 4.x es estable
+    "transformers>=4.49,<5",
     "datasets>=2.20",
     "accelerate>=0.33",
+    "sentencepiece>=0.2",   # requerido por el tokenizer de DeBERTa-v3
+    "protobuf>=4.25",
 ]
 monitor = [
     "evidently>=0.4.33",
