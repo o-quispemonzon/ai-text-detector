@@ -57,6 +57,15 @@ Me quedo con milisegundos de latencia en CPU y una imagen Docker liviana antes q
 cuarta cifra decimal del transformer. La justificación completa, con trade-offs, está en
 [docs/decisions.md](docs/decisions.md).
 
+## Demo
+
+![Demo de Streamlit: predicción sobre un ensayo humano](docs/img/Prediction.png)
+
+La demo Streamlit consumiendo la API en vivo: un ensayo escrito por mí (traducido al
+inglés) clasificado como humano con P(IA) = 0.0%, en 178 ms de latencia sobre CPU con el
+modelo LightGBM servido. Cada predicción queda registrada (sin el texto) para el
+monitoreo de drift.
+
 ## Arquitectura
 
 ```mermaid
