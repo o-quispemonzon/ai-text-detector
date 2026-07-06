@@ -13,7 +13,7 @@ __pycache__/
 # Experimentos y artefactos
 mlflow.db
 mlruns/
-models/
+/models/
 mlartifacts/
 models/artifacts/
 *.ckpt
