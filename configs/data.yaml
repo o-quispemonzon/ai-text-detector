@@ -5,15 +5,27 @@ datasets:
   - name: daigt_v3
     slug: thedrcat/daigt-v3-train-dataset
 
+# Dataset canónico de trabajo. Decisión (EDA, día 1): v3_drcat_02 contiene el 91%
+# de v2, no tiene textos nulos (v3_01 tiene 148) y es el único con columna `model`
+# (familia del generador), necesaria para el split OOD.
+canonical:
+  dataset: daigt_v3
+  file: raw/daigt_v3/train_v3_drcat_02.csv
+
 paths:
   raw_dir: data/raw
   processed_dir: data/processed
   manifest: data/manifest.json
 
+cleaning:
+  min_words: 30            # elimina textos degenerados (8 casos, todos AI)
+  drop_exact_duplicates: true
+
 split:
   seed: 42
   test_size: 0.15
   val_size: 0.15
-  # Held-out por generador/fuente para medir generalización real.
-  # Se define tras el EDA del día 1 (ej. dejar fuera una familia de modelos).
-  holdout_sources: []
+  # Familias de generadores excluidas COMPLETAS del train/val: forman el test OOD.
+  # Miden generalización a modelos nunca vistos. Elegidas por ser familias
+  # distintas entre sí y de tamaño moderado (~4k textos, 6% del dataset).
+  ood_model_families: [claude, palm, cohere]
